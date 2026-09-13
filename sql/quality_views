@@ -1,0 +1,79 @@
+USE MaterialMasterDQ;
+GO
+
+IF OBJECT_ID('dbo.vw_material_quality', 'V') IS NOT NULL
+    DROP VIEW dbo.vw_material_quality;
+GO
+
+CREATE VIEW dbo.vw_material_quality
+AS
+WITH dupes AS (
+    SELECT Material_ID
+    FROM dbo.material_master
+    WHERE NULLIF(LTRIM(RTRIM(Material_ID)), '') IS NOT NULL
+    GROUP BY Material_ID
+    HAVING COUNT(*) > 1
+)
+SELECT
+    m.*,
+
+    CASE WHEN NULLIF(LTRIM(RTRIM(m.Material_ID)), '') IS NULL THEN 1 ELSE 0 END AS Material_ID_Missing_Flag,
+    CASE WHEN d.Material_ID IS NOT NULL THEN 1 ELSE 0 END AS Duplicate_ID_Flag,
+    CASE WHEN NULLIF(LTRIM(RTRIM(m.Material_Description)), '') IS NULL THEN 1 ELSE 0 END AS Description_Missing_Flag,
+
+    CASE WHEN t.Material_Type IS NULL THEN 1 ELSE 0 END AS Material_Type_Invalid_Flag,
+    CASE WHEN g.Material_Group IS NULL THEN 1 ELSE 0 END AS Material_Group_Invalid_Flag,
+    CASE WHEN u.UOM_Code IS NULL THEN 1 ELSE 0 END AS UOM_Invalid_Flag,
+    CASE WHEN p.Plant IS NULL THEN 1 ELSE 0 END AS Plant_Invalid_Flag,
+
+    CASE WHEN m.Standard_Cost IS NULL OR m.Standard_Cost <= 0 THEN 1 ELSE 0 END AS Cost_Invalid_Flag,
+
+    CASE
+        WHEN m.Created_Date IS NULL OR m.Changed_Date IS NULL
+             OR m.Changed_Date < m.Created_Date
+        THEN 1 ELSE 0
+    END AS Date_Invalid_Flag,
+
+    CASE WHEN NULLIF(LTRIM(RTRIM(m.Supplier_ID)), '') IS NULL THEN 1 ELSE 0 END AS Supplier_Missing_Flag,
+
+    (
+        CASE WHEN NULLIF(LTRIM(RTRIM(m.Material_ID)), '') IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN d.Material_ID IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN NULLIF(LTRIM(RTRIM(m.Material_Description)), '') IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN t.Material_Type IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN g.Material_Group IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN u.UOM_Code IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN p.Plant IS NULL THEN 1 ELSE 0 END +
+        CASE WHEN m.Standard_Cost IS NULL OR m.Standard_Cost <= 0 THEN 1 ELSE 0 END +
+        CASE WHEN m.Created_Date IS NULL OR m.Changed_Date IS NULL OR m.Changed_Date < m.Created_Date THEN 1 ELSE 0 END +
+        CASE WHEN NULLIF(LTRIM(RTRIM(m.Supplier_ID)), '') IS NULL THEN 1 ELSE 0 END
+    ) AS Total_Error_Count,
+
+    CASE
+        WHEN
+            NULLIF(LTRIM(RTRIM(m.Material_ID)), '') IS NULL
+            OR d.Material_ID IS NOT NULL
+            OR NULLIF(LTRIM(RTRIM(m.Material_Description)), '') IS NULL
+            OR t.Material_Type IS NULL
+            OR g.Material_Group IS NULL
+            OR u.UOM_Code IS NULL
+            OR p.Plant IS NULL
+            OR m.Standard_Cost IS NULL OR m.Standard_Cost <= 0
+            OR m.Created_Date IS NULL OR m.Changed_Date IS NULL OR m.Changed_Date < m.Created_Date
+            OR NULLIF(LTRIM(RTRIM(m.Supplier_ID)), '') IS NULL
+        THEN 'Error'
+        ELSE 'Valid'
+    END AS Overall_Quality
+
+FROM dbo.material_master m
+LEFT JOIN dupes d
+    ON m.Material_ID = d.Material_ID
+LEFT JOIN dbo.dim_material_type t
+    ON m.Material_Type = t.Material_Type
+LEFT JOIN dbo.dim_material_group g
+    ON m.Material_Group = g.Material_Group
+LEFT JOIN dbo.dim_uom u
+    ON m.Base_UOM = u.UOM_Code
+LEFT JOIN dbo.dim_plant p
+    ON m.Plant = p.Plant;
+GO
