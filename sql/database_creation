@@ -1,0 +1,5 @@
+CREATE DATABASE MaterialMasterDQ;
+GO
+
+USE MaterialMasterDQ;
+GO
