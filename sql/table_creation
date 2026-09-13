@@ -1,0 +1,49 @@
+USE MaterialMasterDQ;
+GO
+
+IF OBJECT_ID('dbo.material_master', 'U') IS NOT NULL DROP TABLE dbo.material_master;
+IF OBJECT_ID('dbo.dim_material_type', 'U') IS NOT NULL DROP TABLE dbo.dim_material_type;
+IF OBJECT_ID('dbo.dim_material_group', 'U') IS NOT NULL DROP TABLE dbo.dim_material_group;
+IF OBJECT_ID('dbo.dim_uom', 'U') IS NOT NULL DROP TABLE dbo.dim_uom;
+IF OBJECT_ID('dbo.dim_plant', 'U') IS NOT NULL DROP TABLE dbo.dim_plant;
+IF OBJECT_ID('dbo.dim_supplier', 'U') IS NOT NULL DROP TABLE dbo.dim_supplier;
+
+CREATE TABLE dbo.material_master (
+    Material_ID VARCHAR(20) NULL,
+    Material_Description VARCHAR(200) NULL,
+    Material_Type VARCHAR(50) NULL,
+    Material_Group VARCHAR(100) NULL,
+    Base_UOM VARCHAR(20) NULL,
+    Plant VARCHAR(20) NULL,
+    Standard_Cost DECIMAL(18,2) NULL,
+    Currency VARCHAR(10) NULL,
+    Created_Date DATE NULL,
+    Changed_Date DATE NULL,
+    Status VARCHAR(20) NULL,
+    Supplier_ID VARCHAR(20) NULL,
+    Manufacturer VARCHAR(100) NULL,
+    Country_of_Origin VARCHAR(50) NULL,
+    Procurement_Type VARCHAR(30) NULL
+);
+
+CREATE TABLE dbo.dim_material_type (
+    Material_Type VARCHAR(50) PRIMARY KEY,
+    Material_Type_Name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE dbo.dim_material_group (
+    Material_Group VARCHAR(100) PRIMARY KEY
+);
+
+CREATE TABLE dbo.dim_uom (
+    UOM_Code VARCHAR(20) PRIMARY KEY
+);
+
+CREATE TABLE dbo.dim_plant (
+    Plant VARCHAR(20) PRIMARY KEY,
+    Plant_Name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE dbo.dim_supplier (
+    Supplier_ID VARCHAR(20) PRIMARY KEY
+);
