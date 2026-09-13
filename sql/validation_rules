@@ -1,0 +1,68 @@
+USE MaterialMasterDQ;
+GO
+
+/* ============================================================
+   DATA QUALITY VALIDATION RULES
+   ============================================================ */
+
+-- DQ001: Material ID completeness
+SELECT COUNT(*) AS Failed_DQ001
+FROM dbo.material_master
+WHERE NULLIF(LTRIM(RTRIM(Material_ID)), '') IS NULL;
+
+-- DQ002: Material ID uniqueness / duplicates
+SELECT Material_ID, COUNT(*) AS Duplicate_Count
+FROM dbo.material_master
+WHERE NULLIF(LTRIM(RTRIM(Material_ID)), '') IS NOT NULL
+GROUP BY Material_ID
+HAVING COUNT(*) > 1;
+
+-- DQ003: Description completeness
+SELECT COUNT(*) AS Failed_DQ003
+FROM dbo.material_master
+WHERE NULLIF(LTRIM(RTRIM(Material_Description)), '') IS NULL;
+
+-- DQ004: Material type validity
+SELECT COUNT(*) AS Failed_DQ004
+FROM dbo.material_master m
+LEFT JOIN dbo.dim_material_type t
+    ON m.Material_Type = t.Material_Type
+WHERE t.Material_Type IS NULL;
+
+-- DQ005: Material group validity
+SELECT COUNT(*) AS Failed_DQ005
+FROM dbo.material_master m
+LEFT JOIN dbo.dim_material_group g
+    ON m.Material_Group = g.Material_Group
+WHERE g.Material_Group IS NULL;
+
+-- DQ006: UOM validity
+SELECT COUNT(*) AS Failed_DQ006
+FROM dbo.material_master m
+LEFT JOIN dbo.dim_uom u
+    ON m.Base_UOM = u.UOM_Code
+WHERE u.UOM_Code IS NULL;
+
+-- DQ007: Plant validity
+SELECT COUNT(*) AS Failed_DQ007
+FROM dbo.material_master m
+LEFT JOIN dbo.dim_plant p
+    ON m.Plant = p.Plant
+WHERE p.Plant IS NULL;
+
+-- DQ008: Standard cost validity
+SELECT COUNT(*) AS Failed_DQ008
+FROM dbo.material_master
+WHERE Standard_Cost IS NULL OR Standard_Cost <= 0;
+
+-- DQ009: Date consistency
+SELECT COUNT(*) AS Failed_DQ009
+FROM dbo.material_master
+WHERE Created_Date IS NULL
+   OR Changed_Date IS NULL
+   OR Changed_Date < Created_Date;
+
+-- DQ010: Supplier completeness
+SELECT COUNT(*) AS Failed_DQ010
+FROM dbo.material_master
+WHERE NULLIF(LTRIM(RTRIM(Supplier_ID)), '') IS NULL;
