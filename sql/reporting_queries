@@ -1,0 +1,76 @@
+USE MaterialMasterDQ;
+GO
+
+/* ============================================================
+   REPORTING QUERIES / METRICS
+   ============================================================ */
+
+-- Overall summary
+SELECT
+    COUNT(*) AS Total_Rows,
+    COUNT(DISTINCT Material_ID) AS Distinct_Material_IDs,
+    SUM(CASE WHEN Overall_Quality = 'Valid' THEN 1 ELSE 0 END) AS Valid_Rows,
+    SUM(CASE WHEN Overall_Quality = 'Error' THEN 1 ELSE 0 END) AS Error_Rows,
+    CAST(
+        100.0 * SUM(CASE WHEN Overall_Quality = 'Valid' THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(*), 0)
+        AS DECIMAL(5,2)
+    ) AS Quality_Percent
+FROM dbo.vw_material_quality;
+
+-- Error count by rule
+SELECT 'Duplicate Material ID' AS Rule_Name, SUM(Duplicate_ID_Flag) AS Error_Count FROM dbo.vw_material_quality
+UNION ALL SELECT 'Missing Material Description', SUM(Description_Missing_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid Material Type', SUM(Material_Type_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid Material Group', SUM(Material_Group_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid UOM', SUM(UOM_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid Plant', SUM(Plant_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid Standard Cost', SUM(Cost_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Invalid Dates', SUM(Date_Invalid_Flag) FROM dbo.vw_material_quality
+UNION ALL SELECT 'Missing Supplier', SUM(Supplier_Missing_Flag) FROM dbo.vw_material_quality;
+
+-- Quality by plant
+SELECT
+    Plant,
+    COUNT(*) AS Material_Count,
+    SUM(CASE WHEN Overall_Quality = 'Valid' THEN 1 ELSE 0 END) AS Valid_Count,
+    CAST(
+        100.0 * SUM(CASE WHEN Overall_Quality = 'Valid' THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(*), 0)
+        AS DECIMAL(5,2)
+    ) AS Quality_Percent
+FROM dbo.vw_material_quality
+GROUP BY Plant
+ORDER BY Quality_Percent ASC;
+
+-- Quality by material group
+SELECT
+    Material_Group,
+    COUNT(*) AS Material_Count,
+    SUM(Total_Error_Count) AS Total_Errors,
+    CAST(100.0 * SUM(CASE WHEN Overall_Quality='Valid' THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0) AS DECIMAL(5,2)) AS Quality_Percent
+FROM dbo.vw_material_quality
+GROUP BY Material_Group
+ORDER BY Total_Errors DESC;
+
+-- Worst records to investigate
+SELECT TOP 50
+    Material_ID,
+    Material_Description,
+    Material_Type,
+    Material_Group,
+    Plant,
+    Base_UOM,
+    Standard_Cost,
+    Total_Error_Count,
+    Overall_Quality
+FROM dbo.vw_material_quality
+WHERE Overall_Quality = 'Error'
+ORDER BY Total_Error_Count DESC, Material_ID;
+
+
+SELECT
+    Overall_Quality,
+    COUNT(*) AS Count
+FROM dbo.vw_material_quality
+GROUP BY Overall_Quality;
